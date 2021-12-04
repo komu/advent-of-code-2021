@@ -23,3 +23,10 @@ fun String.bitsToInt(): Int {
 
     return i
 }
+
+fun <T> List<List<T>>.transpose(): List<List<T>> {
+    val rows = size
+    val cols = first().size
+
+    return List(cols) { col -> List(rows) { row -> this[row][col] } }
+}
