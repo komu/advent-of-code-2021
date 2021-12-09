@@ -57,8 +57,6 @@ private class OceanFloor {
     }
 }
 
-private data class Point(val x: Int, val y: Int)
-
 private data class LineSegment(val start: Point, val end: Point) {
 
     val length: Int

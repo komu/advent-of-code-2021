@@ -24,9 +24,20 @@ fun String.bitsToInt(): Int {
     return i
 }
 
+fun Iterable<Int>.product() = fold(1) { x, y -> x * y }
+
 fun <T> List<List<T>>.transpose(): List<List<T>> {
     val rows = size
     val cols = first().size
 
     return List(cols) { col -> List(rows) { row -> this[row][col] } }
+}
+
+data class Point(val x: Int, val y: Int) {
+    val neighbors: List<Point>
+        get() = primaryDirections.map { (dx, dy) -> Point(x + dx, y + dy) }
+
+    companion object {
+        private val primaryDirections = listOf(Pair(-1, 0), Pair(1, 0), Pair(0, -1), Pair(0, 1))
+    }
 }
