@@ -41,3 +41,7 @@ data class Point(val x: Int, val y: Int) {
         private val primaryDirections = listOf(Pair(-1, 0), Pair(1, 0), Pair(0, -1), Pair(0, 1))
     }
 }
+
+fun <T : Comparable<T>> List<T>.median(): T =
+    sorted()[size / 2]
+
