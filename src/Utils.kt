@@ -37,8 +37,12 @@ data class Point(val x: Int, val y: Int) {
     val neighbors: List<Point>
         get() = primaryDirections.map { (dx, dy) -> Point(x + dx, y + dy) }
 
+    val allNeighbors: List<Point>
+        get() = allDirections.map { (dx, dy) -> Point(x + dx, y + dy) }
+
     companion object {
         private val primaryDirections = listOf(Pair(-1, 0), Pair(1, 0), Pair(0, -1), Pair(0, 1))
+        private val allDirections = listOf(Pair(-1, 0), Pair(1, 0), Pair(0, -1), Pair(0, 1), Pair(-1, -1), Pair(-1, 1), Pair(1, -1), Pair(1, 1))
     }
 }
 
