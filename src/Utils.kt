@@ -12,7 +12,10 @@ fun readInput(name: String) = File("src", "$name.txt").readLines()
  */
 fun String.md5(): String = BigInteger(1, MessageDigest.getInstance("MD5").digest(toByteArray())).toString(16)
 
-fun String.bitsToInt(): Int {
+fun Boolean.toLong(): Long =
+    if (this) 1 else 0
+
+fun CharSequence.bitsToInt(): Int {
     var i = 0
 
     for (b in this) {
@@ -25,6 +28,7 @@ fun String.bitsToInt(): Int {
 }
 
 fun Iterable<Int>.product() = fold(1) { x, y -> x * y }
+inline fun <T> Iterable<T>.productOf(f: (T) -> Long) = fold(1L) { p, x -> p * f(x) }
 
 fun <T> List<List<T>>.transpose(): List<List<T>> {
     val rows = size
@@ -42,7 +46,8 @@ data class Point(val x: Int, val y: Int) {
 
     companion object {
         private val primaryDirections = listOf(Pair(-1, 0), Pair(1, 0), Pair(0, -1), Pair(0, 1))
-        private val allDirections = listOf(Pair(-1, 0), Pair(1, 0), Pair(0, -1), Pair(0, 1), Pair(-1, -1), Pair(-1, 1), Pair(1, -1), Pair(1, 1))
+        private val allDirections =
+            listOf(Pair(-1, 0), Pair(1, 0), Pair(0, -1), Pair(0, 1), Pair(-1, -1), Pair(-1, 1), Pair(1, -1), Pair(1, 1))
     }
 }
 
