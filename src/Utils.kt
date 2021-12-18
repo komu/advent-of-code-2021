@@ -54,3 +54,8 @@ data class Point(val x: Int, val y: Int) {
 fun <T : Comparable<T>> List<T>.median(): T =
     sorted()[size / 2]
 
+fun <T> checkEqual(lhs: T, rhs: T) {
+    if (lhs != rhs)
+        error("$lhs != $rhs")
+}
+
