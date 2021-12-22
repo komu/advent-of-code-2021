@@ -62,3 +62,14 @@ fun <T> checkEqual(lhs: T, rhs: T) {
         error("$lhs != $rhs")
 }
 
+fun IntRange.clip(bounds: IntRange) =
+    maxOf(first, bounds.first)..minOf(last, bounds.last)
+
+val IntRange.size: Int
+    get() = last - first + 1
+
+fun IntRange.overlaps(rhs: IntRange) =
+    this.first <= rhs.last && rhs.first <= this.last
+
+operator fun IntRange.contains(rhs: IntRange) =
+    this.first <= rhs.first && rhs.last <= this.last
