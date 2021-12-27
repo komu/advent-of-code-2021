@@ -1,5 +1,6 @@
 import AmphipodType.*
 import java.util.*
+import kotlin.system.measureTimeMillis
 
 fun main() {
 
@@ -8,7 +9,7 @@ fun main() {
 
         val config = AmphipodState(space, ts.zip(space.homes.flatten()) { t, l -> Amphipod(t, l) })
 
-        return shortestPathCost(config, { it.isSolved }, { it.edges }) ?: error("no solution")
+        return shortestPathCost(config) ?: error("no solution")
     }
 
     fun part1(rows: List<List<AmphipodType>>) =
@@ -31,8 +32,13 @@ fun main() {
         listOf(DESERT, DESERT, BRONZE, COPPER),
     )
 
-    checkEqual(part1(testInput), 12521)
-    checkEqual(part2(testInput), 44169)
+    println(measureTimeMillis {
+        checkEqual(part1(testInput), 12521)
+    }.toString() + " ms")
+
+    println(measureTimeMillis {
+        checkEqual(part2(testInput), 44169)
+    }.toString() + " ms")
 
     val part1 = part1(input)
     println(part1)
@@ -52,6 +58,7 @@ private enum class AmphipodType(val moveCost: Int) {
 
 private class AmphipodSpaceNode(val id: Int, val homeFor: AmphipodType? = null) {
     val neighbors = mutableListOf<Pair<AmphipodSpaceNode, Int>>()
+    lateinit var paths: Map<AmphipodSpaceNode, PathDefinition>
 
     val isRoom: Boolean
         get() = homeFor != null
@@ -73,6 +80,7 @@ private class AmphipodSpace(homeSize: Int) {
     val homes = listOf(amberHomes, bronzeHomes, copperHomes, desertHomes)
     val hallways =
         listOf(leftmost, left, betweenAmberAndBronze, betweenBronzeAndCopper, betweenCopperAndDesert, right, rightmost)
+    private val allNodes = homes.flatten() + hallways
 
     private fun connect(n1: AmphipodSpaceNode, n2: AmphipodSpaceNode, steps: Int) {
         n1.neighbors += Pair(n2, steps)
@@ -105,6 +113,9 @@ private class AmphipodSpace(homeSize: Int) {
         connect(betweenAmberAndBronze, betweenBronzeAndCopper, steps = 2)
         connect(betweenBronzeAndCopper, betweenCopperAndDesert, steps = 2)
         connect(betweenCopperAndDesert, right, steps = 2)
+
+        for (node in allNodes)
+            node.paths = pathsFrom(node)
     }
 
     fun homeRowsFromBottomToTop(type: AmphipodType) = when (type) {
@@ -147,6 +158,11 @@ private value class AmphipodSpaceNodeSet(private val bits: Int = 0) {
 
     operator fun plus(node: AmphipodSpaceNode): AmphipodSpaceNodeSet =
         AmphipodSpaceNodeSet(bits = bits or (1 shl node.id))
+
+    infix fun and(set: AmphipodSpaceNodeSet) = AmphipodSpaceNodeSet(bits and set.bits)
+
+    val isEmpty: Boolean
+        get() = bits == 0
 
     companion object {
 
@@ -207,7 +223,7 @@ private class AmphipodState(
         amphipods.all { it.location.homeFor != type || it.type == type }
 
     private fun pathLength(from: AmphipodSpaceNode, target: AmphipodSpaceNode): Int? =
-        shortestPathCost(from, { it == target }, { it.neighbors.filter { (n, _) -> n !in occupiedRooms } })
+        from.paths[target]?.takeIf { (it.nodes and occupiedRooms).isEmpty }?.cost
 
     fun move(amphipod: Amphipod, target: AmphipodSpaceNode, steps: Int): Pair<AmphipodState, Int> {
         val cost = steps * amphipod.type.moveCost
@@ -225,26 +241,22 @@ private class AmphipodState(
         amphipods.all { it.type != type || it.isAtHome }
 }
 
-private inline fun <T> shortestPathCost(
-    from: T,
-    isSolution: (T) -> Boolean,
-    edges: (T) -> Iterable<Pair<T, Int>>,
-): Int? {
-    val initial = AmphipodPathNode(from, 0)
+private fun shortestPathCost(from: AmphipodState): Int? {
+    val initial = AmphipodPathNode(from, 0, null)
     val nodes = mutableMapOf(from to initial)
     val queue = PriorityQueue(setOf(initial))
 
     while (queue.isNotEmpty()) {
         val v = queue.remove()
 
-        if (isSolution(v.node))
+        if (v.node.isSolved)
             return v.distance
 
-        for ((u, cost) in edges(v.node)) {
+        for ((u, cost) in v.node.edges) {
             val newDistance = v.distance + cost
             val previousDistance = nodes[u]?.distance
             if (previousDistance == null || newDistance < previousDistance) {
-                val newNode = AmphipodPathNode(u, newDistance)
+                val newNode = AmphipodPathNode(u, newDistance, v)
                 nodes[u] = newNode
                 queue += newNode
             }
@@ -254,6 +266,43 @@ private inline fun <T> shortestPathCost(
     return null
 }
 
-class AmphipodPathNode<T>(val node: T, val distance: Int) : Comparable<AmphipodPathNode<T>> {
+private class PathDefinition(val cost: Int, val nodes: AmphipodSpaceNodeSet)
+
+private fun pathsFrom(from: AmphipodSpaceNode): Map<AmphipodSpaceNode, PathDefinition> {
+    val initial = AmphipodPathNode(from, 0, null)
+    val nodes = mutableMapOf(from to initial)
+    val queue = PriorityQueue(setOf(initial))
+
+    while (queue.isNotEmpty()) {
+        val v = queue.remove()
+
+        for ((u, cost) in v.node.neighbors) {
+            val newDistance = v.distance + cost
+            val previousDistance = nodes[u]?.distance
+            if (previousDistance == null || newDistance < previousDistance) {
+                val newNode = AmphipodPathNode(u, newDistance, v)
+                nodes[u] = newNode
+                queue += newNode
+            }
+        }
+    }
+
+    val result = mutableMapOf<AmphipodSpaceNode, PathDefinition>()
+    for (pathNode in nodes.values) {
+        var nodesOnPath = AmphipodSpaceNodeSet()
+        var n = pathNode
+        while (true) {
+            if (n.node != from)
+                nodesOnPath += n.node
+            n = n.previous ?: break
+        }
+
+        result[pathNode.node] = PathDefinition(pathNode.distance, nodesOnPath)
+    }
+
+    return result
+}
+
+private class AmphipodPathNode<T>(val node: T, val distance: Int, val previous: AmphipodPathNode<T>?) : Comparable<AmphipodPathNode<T>> {
     override fun compareTo(other: AmphipodPathNode<T>) = distance.compareTo(other.distance)
 }
